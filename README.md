@@ -2,6 +2,12 @@
 
 A web app that captures hardware, VLANs, security, and services to generate a standardized, copy-paste-ready Cisco IOS configuration file.
 
+## Push to GitHub
+
+1. Create a new repository at [github.com/new](https://github.com/new) named **henderson-cisco-config-generator** (leave it empty—no README or .gitignore).
+2. Edit `push-to-github.bat` and set `GITHUB_USER` to your GitHub username.
+3. Run `push-to-github.bat` to add the remote and push.
+
 ## Features
 
 - **Hardware**: Model picker (Catalyst 9200/9300, ISR 4321/4331/4351), port density (8/24/48), optional NIM modules for routers
