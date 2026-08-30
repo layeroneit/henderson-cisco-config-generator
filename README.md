@@ -1,34 +1,110 @@
 # Henderson's Cisco Configuration Generator
 
-A web app that captures hardware, VLANs, security, and services to generate a standardized, copy-paste-ready Cisco IOS configuration file.
+**👉 [Open it in your browser](https://layeroneit.github.io/henderson-cisco-config-generator/) — nothing to install.**
 
-## Push to GitHub
+Fill in a form, get a clean, copy-paste-ready Cisco IOS configuration. Built for
+people who are learning their way around switches and routers and would rather
+not retype the same forty lines for the tenth time.
 
-1. Create a new repository at [github.com/new](https://github.com/new) named **henderson-cisco-config-generator** (leave it empty—no README or .gitignore).
-2. Edit `push-to-github.bat` and set `GITHUB_USER` to your GitHub username.
-3. Run `push-to-github.bat` to add the remote and push.
+It runs entirely in your browser. Nothing you type is sent anywhere — no server,
+no account, no analytics. Close the tab and it's gone.
 
-## Features
+---
 
-- **Hardware**: Model picker (Catalyst 9200/9300, ISR 4321/4331/4351), port density (8/24/48), optional NIM modules for routers
-- **VLANs**: Voice, Data, and Security VLAN IDs and names (validation 1–4094)
-- **Interface options**: Access or trunk mode; trunk allowed VLANs; optional interface description
-- **Security** (collapsible): Enable secret, domain name, SSH version, login banner
-- **Management** (switches, collapsible): Management VLAN, IP, subnet mask, default gateway
-- **Services** (collapsible): NTP servers, SNMP community, syslog server
-- **ACL** (collapsible): Optional named or numbered ACL with custom lines
-- **Output**: Generate, Copy to clipboard, Download as `.txt`
+## ⚠️ Read this before you paste anything
 
-## How to run
+This generates a **solid starting point, not a finished design.**
 
-1. Open the project folder: `henderson-cisco-config-generator`
-2. Double-click `index.html` or `run-app.bat`, or
-3. Run a local server (e.g. `npx serve .` or `python -m http.server 8080`) and open the URL.
+- **Read every line before you apply it.** You are the last check; nothing here
+  can see your network.
+- **Try it on a lab device or a spare port first.** Not on the switch the whole
+  office is plugged into, at 4pm on a Friday.
+- **The downloaded file contains your passwords in plain text.** The device
+  hashes them once applied — the file does not. Delete it when you're done, and
+  don't email it to yourself.
+- **Applying a config remotely can lock you out.** If you're SSH'd into the
+  device you're configuring, make sure you have console access before you start.
 
-No build step or npm install required.
+---
 
-## Project structure
+## Start here
 
-- `index.html` – Form and collapsible sections
-- `styles.css` – Layout, collapsible panels, styling
-- `app.js` – Logic, validation (VLAN, IP, enable secret), config generation, copy & download
+1. Open the [generator](https://layeroneit.github.io/henderson-cisco-config-generator/).
+2. Click a **template** — *Basic access switch*, *Voice + data switch*, or
+   *Branch router* — to fill the form with sensible values.
+3. Change what doesn't match your kit. Every field has a hint under it.
+4. Fill in the **SSH username and password**. Skip these and you won't be able
+   to log in over the network afterwards.
+5. Click **Generate config**.
+6. Read **"What this config does"** — it explains, in plain English, what you're
+   about to apply. If that paragraph doesn't match what you wanted, fix the form
+   rather than the config.
+7. Copy or download, then apply it to your device.
+
+## What it covers
+
+| Section | What you get |
+|---|---|
+| **Hardware** | Catalyst 9200 / 9300 switches, ISR 4321 / 4331 / 4351 routers, 8 / 24 / 48 ports, optional NIM modules |
+| **VLANs** | Voice, data and management VLANs with names, validated to the real 1–4094 range |
+| **Interfaces** | Access or trunk mode, allowed VLAN lists, descriptions, voice VLAN on access ports |
+| **Security** | Enable secret, SSH with a working login, domain name, login banner |
+| **Hardening** | Password encryption, web server off, portfast + BPDU guard on access ports |
+| **Management** | Management VLAN SVI, IP, mask, default gateway |
+| **Services** | NTP, SNMP community, syslog host |
+| **ACLs** | Named or numbered access lists with your own rules |
+
+### About that hardening checkbox
+
+It's on by default, and it's the part a beginner most benefits from:
+
+- `service password-encryption` — stops passwords sitting in the running config
+  in the clear.
+- `no ip http server` / `no ip http secure-server` — turns off a web interface
+  you almost certainly aren't using and don't want exposed.
+- `spanning-tree portfast` + `bpduguard` on access ports — a PC gets a link
+  immediately instead of waiting ~30 seconds, and if somebody plugs a switch
+  into a desk port, that port shuts down instead of taking the network with it.
+
+### About SSH
+
+Generating an SSH key is **not** the same as being able to log in. A device
+needs a key *and* an account *and* a vty line that accepts SSH. Fill in the SSH
+username and password fields and you get all three. Leave them blank and the
+generated config says so, loudly, in a comment.
+
+---
+
+## Running it offline
+
+Air-gapped, or just prefer a local copy? Grab the
+[latest release](https://github.com/layeroneit/henderson-cisco-config-generator/releases),
+unzip it, and double-click `index.html`. No build step, no `npm install`, no
+internet. It's three files and it works the same.
+
+## For developers
+
+Plain HTML, CSS and JavaScript — no framework, no build.
+
+```
+index.html   the form
+styles.css   layout and theme
+app.js       validation, config generation, copy and download
+verify.js    headless check that the generated config is actually usable
+```
+
+`node verify.js` runs `app.js` against a stub DOM and asserts the output
+contains a working SSH login, the hardening lines, and the plain-text password
+warning. Run it after touching `buildConfig`.
+
+---
+
+## License
+
+Apache License 2.0 — see [`LICENSE`](LICENSE).
+
+Built by **[Layer One IT Consultants](https://layeroneconsultants.com/)**.
+Copyright © 2026 Layer One IT Consultants.
+
+Cisco, Catalyst and IOS are trademarks of Cisco Systems, Inc. This project is
+not affiliated with, endorsed by, or supported by Cisco.

@@ -22,6 +22,24 @@
       <p class="subtitle">Hardware, VLANs, security & services → copy-paste-ready IOS config</p>
     </header>
 
+    <section class="card notice">
+      <strong>Read before you paste.</strong> This produces a solid starting
+      point, not a finished design. Read every line, check it against your own
+      network, and try it on a lab device or a spare port before you touch
+      anything in production. Nobody here can see your network; you are the
+      last check.
+    </section>
+
+    <section class="card presets">
+      <h2>Start from a template</h2>
+      <p class="hint">Fills the form with sensible values you can then edit. Passwords are never pre-filled.</p>
+      <div class="preset-row">
+        <button type="button" class="btn btn-secondary" data-preset="access-switch">Basic access switch</button>
+        <button type="button" class="btn btn-secondary" data-preset="voice-switch">Voice + data switch</button>
+        <button type="button" class="btn btn-secondary" data-preset="branch-router">Branch router</button>
+      </div>
+    </section>
+
     <main class="main">
       <!-- 1. Hardware -->
       <section class="card">
@@ -128,12 +146,26 @@
         </h2>
         <div id="security-panel" class="collapse-panel">
           <div class="field">
-            <label for="enable-secret">Enable secret (hashed)</label>
-            <input type="password" id="enable-secret" placeholder="Min 8 chars; will appear as type 5 in config" autocomplete="off">
+            <label for="enable-secret">Enable secret</label>
+            <input type="password" id="enable-secret" placeholder="Min 8 characters" autocomplete="off">
+            <p class="hint">The password for <code>enable</code> mode. The switch stores it hashed &mdash; but
+            <strong>the file this tool generates contains it in plain text</strong>, so delete that file once you have applied it.</p>
           </div>
           <div class="field">
             <label for="domain-name">Domain name (for SSH key)</label>
             <input type="text" id="domain-name" placeholder="e.g. company.local">
+            <p class="hint">Required before a device will generate an SSH key. Any internal name works.</p>
+          </div>
+          <div class="field">
+            <label for="ssh-user">SSH username</label>
+            <input type="text" id="ssh-user" placeholder="e.g. netadmin" autocomplete="off">
+            <p class="hint"><strong>Without this you cannot log in over SSH.</strong> Generating a key is not
+            the same as having an account &mdash; leave these blank and you will be locked out of remote
+            access after the reload.</p>
+          </div>
+          <div class="field">
+            <label for="ssh-user-pass">SSH password</label>
+            <input type="password" id="ssh-user-pass" placeholder="Min 8 characters" autocomplete="off">
           </div>
           <div class="field">
             <label for="ssh-version">SSH version</label>
@@ -141,6 +173,15 @@
               <option value="2">2</option>
               <option value="1">1</option>
             </select>
+          </div>
+          <div class="field field--check">
+            <label for="harden">
+              <input type="checkbox" id="harden" checked>
+              Apply baseline hardening (recommended)
+            </label>
+            <p class="hint">Encrypts stored passwords, turns off the built-in web server, and puts
+            portfast + BPDU guard on access ports so a switch plugged into a desk port cannot take
+            the network down.</p>
           </div>
           <div class="field">
             <label for="login-banner">Login banner (optional)</label>
@@ -218,6 +259,12 @@
         <button type="button" id="generate" class="btn btn-primary">Generate config</button>
         <button type="button" id="copy" class="btn btn-secondary" disabled>Copy to clipboard</button>
         <button type="button" id="download" class="btn btn-secondary" disabled>Download .txt</button>
+      </section>
+
+      <!-- What it will do, in words -->
+      <section class="card summary-wrap hidden" id="summary-wrap">
+        <h2>What this config does</h2>
+        <ul id="summary-list" class="summary-list"></ul>
       </section>
 
       <!-- Output -->
