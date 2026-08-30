@@ -17,7 +17,7 @@ const values = {
   "vlan-data-id": "20", "vlan-data-name": "DATA",
   "vlan-security-id": "99", "vlan-security-name": "MGMT",
   "port-mode": "access",
-  "trunk-allowed": "", "interface-desc": "Desk ports",
+  "trunk-allowed": "", "interface-desc": "Desk ports", "uplink-ports": "",
   "enable-secret": "SuperSecret123",
   "domain-name": "company.local",
   "ssh-version": "2",
@@ -78,7 +78,7 @@ const cfg = node("output").getAttribute("data-plain");
 const must = [
   ["hostname SW-TEST-01", "hostname"],
   ["crypto key generate rsa", "ssh key"],
-  ["username netadmin privilege 15 secret 0 AnotherSecret123", "LOCAL SSH ACCOUNT"],
+  ["username netadmin privilege 15 algorithm-type sha256 secret AnotherSecret123", "LOCAL SSH ACCOUNT"],
   ["line vty 0 15", "VTY LINES"],
   [" transport input ssh", "SSH ON VTY"],
   [" login local", "LOGIN LOCAL"],
@@ -88,6 +88,10 @@ const must = [
   [" spanning-tree bpduguard enable", "hardening: bpduguard"],
   [" switchport voice vlan 10", "voice vlan on access port"],
   ["WARNING: the next line contains a password in plain text", "cleartext warning"],
+  ["ip domain name company.local", "ip domain name (two words)"],
+  ["algorithm-type sha256", "type 8 password hash"],
+  ["RUN THESE SEPARATELY", "crypto key emitted as a separate step"],
+  ["including whichever one is your uplink", "uplink lockout warning"],
 ];
 
 let bad = 0;
