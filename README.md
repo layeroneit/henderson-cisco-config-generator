@@ -75,6 +75,47 @@ generated config says so, loudly, in a comment.
 
 ---
 
+## What happens to your passwords
+
+The config this tool builds contains an enable secret and an SSH password in
+plain text. Nothing you type is ever sent anywhere — there is no server — but
+"stays in your browser" is not the same as "leaves no trace." Here is the
+honest version.
+
+**What the tool does about it**
+
+- The password boxes are deliberately **not** `<input type="password">`. They are
+  masked with CSS instead. A real password field triggers your browser's "save
+  password?" prompt and can be written into form history; a plain field
+  with `autocomplete="off"` is not managed by the password manager at all.
+- **Clear passwords** empties both boxes and the generated config in one click.
+- After you copy, the clipboard is **overwritten after 90 seconds**, with a
+  countdown so you know.
+- Nothing is written to `localStorage`, `sessionStorage`, IndexedDB, or cookies.
+  Close the tab and the page is gone.
+
+**What no web page can do, including this one**
+
+- **Windows clipboard history.** If you press Win+V you will find the config,
+  password included, and possibly synced to your Microsoft account. The
+  clipboard format that suppresses this is a native one no browser exposes.
+  Overwriting the clipboard does not remove earlier history entries. Clear it
+  in **Settings → System → Clipboard → Clear clipboard data**, or use Download
+  instead of Copy.
+- **The downloaded file.** It sits in Downloads until you delete it, may be
+  indexed by Windows Search, and if your Downloads or Desktop folder is synced
+  by OneDrive it has already left the machine. Deleting to the Recycle Bin only
+  moves it — use Shift+Delete.
+- **Memory.** JavaScript strings are immutable and garbage-collected; a value
+  cannot be reliably zeroed, and it may reach the page file or a crash dump.
+  Full-disk encryption (BitLocker) is what actually addresses this.
+
+**The short version:** prefer **Download** over **Copy**, delete the file once
+you have applied it, and change the passwords afterwards if the machine is not
+yours.
+
+---
+
 ## Running it offline
 
 Air-gapped, or just prefer a local copy? Grab the

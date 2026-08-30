@@ -48,6 +48,8 @@
   const summaryWrap = document.getElementById('summary-wrap');
   const presetButtons = document.querySelectorAll('[data-preset]');
   const uplinkPortsInput = document.getElementById('uplink-ports');
+  const wipeBtn = document.getElementById('wipe');
+  const clipNote = document.getElementById('clip-note');
   const verifyList = document.getElementById('verify-list');
   const verifyWrap = document.getElementById('verify-wrap');
 
@@ -722,6 +724,7 @@
     if (!text) return;
     navigator.clipboard.writeText(text).then(
       function () {
+        armClipboardClear(90);
         var span = document.createElement('span');
         span.className = 'copy-feedback';
         span.textContent = 'Copied!';
@@ -755,6 +758,58 @@
 
   downloadBtn.addEventListener('click', function () { downloadConfig('txt'); });
   if (downloadCfgBtn) downloadCfgBtn.addEventListener('click', function () { downloadConfig('cfg'); });
+
+  /* -------------------------------------------------------------------------
+     Data hygiene.
+
+     This tool handles passwords that end up in a file people save and email.
+     What follows is what a page can honestly do about that -- and the README
+     says plainly what it cannot.
+     ---------------------------------------------------------------------- */
+
+  /** Empties the secret fields and the rendered config. */
+  function wipeSecrets() {
+    [enableSecretInput, sshUserPassInput].forEach(function (el) {
+      el.value = '';
+    });
+    outputPre.textContent = '';
+    outputPre.removeAttribute('data-plain');
+    outputWrap.classList.add('hidden');
+    summaryWrap.classList.add('hidden');
+    verifyWrap.classList.add('hidden');
+    copyBtn.disabled = true;
+    downloadBtn.disabled = true;
+    if (downloadCfgBtn) downloadCfgBtn.disabled = true;
+    if (clipNote) clipNote.textContent = '';
+    enableSecretInput.focus();
+  }
+
+  if (wipeBtn) wipeBtn.addEventListener('click', wipeSecrets);
+
+  /*
+    Windows keeps a clipboard HISTORY (Win+V), and a web page cannot opt out of
+    it -- the format that suppresses it is a native clipboard format no browser
+    exposes. So the honest thing is to overwrite the clipboard after a while
+    and say so, rather than imply the copy was private.
+  */
+  var clipTimer = null;
+  function armClipboardClear(seconds) {
+    if (!clipNote) return;
+    if (clipTimer) clearTimeout(clipTimer);
+    var left = seconds;
+    var tick = function () {
+      clipNote.textContent = 'Clipboard will be overwritten in ' + left + 's. ' +
+        'Note: Windows clipboard history (Win+V) keeps its own copy that no web page can remove.';
+      if (left <= 0) {
+        navigator.clipboard.writeText(' ').catch(function () { /* focus lost; nothing to do */ });
+        clipNote.textContent = 'Clipboard overwritten. Windows clipboard history (Win+V) may still hold the earlier copy.';
+        return;
+      }
+      left -= 1;
+      clipTimer = setTimeout(tick, 1000);
+    };
+    tick();
+  }
 
   toggleNimAndPortDensity();
   toggleTrunkAllowed();

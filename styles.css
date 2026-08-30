@@ -753,3 +753,27 @@ body::before {
   .theme-bg::after { height: 40vh; opacity: 0.5; }
   body::after { opacity: 0.2; }
 }
+
+
+/* ---------------------------------------------------------------------------
+   Password-shaped fields that are NOT <input type="password">.
+
+   Chromium's password manager keys off the input TYPE. A real password field
+   gets a "save password?" bubble, lands in form history, and can be saved
+   provisionally the moment the tab navigates. None of that is wanted for a
+   value that exists for ten seconds on its way into a switch config.
+
+   -webkit-text-security gives the same masking with none of that machinery.
+   It is not in the CSS spec, but Chrome, Edge and Safari all implement it, and
+   Firefox ships -moz-text-security. Where neither lands the field shows as
+   plain text, which is a visible failure rather than a silent one -- the right
+   way round for this.
+   ------------------------------------------------------------------------ */
+
+input.masked {
+  -webkit-text-security: disc;
+  -moz-text-security: disc;
+  text-security: disc;
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+}

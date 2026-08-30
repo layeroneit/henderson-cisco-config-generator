@@ -157,7 +157,7 @@
         <div id="security-panel" class="collapse-panel">
           <div class="field">
             <label for="enable-secret">Enable secret</label>
-            <input type="password" id="enable-secret" placeholder="Min 8 characters" autocomplete="off">
+            <input type="text" class="masked" id="enable-secret" placeholder="Min 8 characters" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
             <p class="hint">The password for <code>enable</code> mode. The switch stores it hashed &mdash; but
             <strong>the file this tool generates contains it in plain text</strong>, so delete that file once you have applied it.</p>
           </div>
@@ -175,7 +175,7 @@
           </div>
           <div class="field">
             <label for="ssh-user-pass">SSH password</label>
-            <input type="password" id="ssh-user-pass" placeholder="Min 8 characters" autocomplete="off">
+            <input type="text" class="masked" id="ssh-user-pass" placeholder="Min 8 characters" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
           </div>
           <div class="field">
             <label for="ssh-version">SSH version</label>
@@ -270,6 +270,7 @@
         <button type="button" id="copy" class="btn btn-secondary" disabled>Copy to clipboard</button>
         <button type="button" id="download" class="btn btn-secondary" disabled>Download .txt</button>
         <button type="button" id="download-cfg" class="btn btn-secondary" disabled>Download .cfg</button>
+        <button type="button" id="wipe" class="btn btn-secondary">Clear passwords</button>
       </section>
 
       <!-- What it will do, in words -->
@@ -286,6 +287,7 @@
         <strong>.cfg</strong> is the same file with the extension VS Code and most network
         tools recognise, so it opens with syntax highlighting.</p>
         <pre id="output" class="output"></pre>
+        <p class="hint" id="clip-note"></p>
       </section>
 
       <!-- Now check it worked -->
