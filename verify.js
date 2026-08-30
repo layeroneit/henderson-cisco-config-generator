@@ -50,7 +50,9 @@ function node(id) {
     addEventListener(ev, fn) { (handlers[id] = handlers[id] || {})[ev] = fn; },
     selectedOptions: [{ textContent: (values[id] || id) }],
     options: [],
-    getAttribute() { return null; },
+    attrs: {},
+    setAttribute(k, v) { this.attrs[k] = v; },
+    getAttribute(k) { return this.attrs[k] !== undefined ? this.attrs[k] : null; },
     querySelector() { return node(id + "-child"); },
   };
   return nodes[id];
@@ -71,7 +73,7 @@ vm.runInContext(fs.readFileSync("app.js", "utf8"), sandbox);
 
 // Fire the Generate button the way a user would.
 handlers["generate"].click();
-const cfg = node("output").textContent;
+const cfg = node("output").getAttribute("data-plain");
 
 const must = [
   ["hostname SW-TEST-01", "hostname"],
@@ -99,7 +101,7 @@ for (const [needle, label] of must) {
 node("ssh-user").value = "";
 node("ssh-user-pass").value = "";
 handlers["generate"].click();
-const cfg2 = node("output").textContent;
+const cfg2 = node("output").getAttribute("data-plain");
 const warned = cfg2.includes("no local username was");
 console.log(`  ${warned ? "PASS" : "FAIL"}  warns when SSH has no account`);
 if (!warned) bad++;

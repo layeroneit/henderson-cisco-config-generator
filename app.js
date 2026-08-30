@@ -38,6 +38,7 @@
   const generateBtn = document.getElementById('generate');
   const copyBtn = document.getElementById('copy');
   const downloadBtn = document.getElementById('download');
+  const downloadCfgBtn = document.getElementById('download-cfg');
   const outputWrap = document.getElementById('output-wrap');
   const outputPre = document.getElementById('output');
   const sshUserInput = document.getElementById('ssh-user');
@@ -46,6 +47,8 @@
   const summaryList = document.getElementById('summary-list');
   const summaryWrap = document.getElementById('summary-wrap');
   const presetButtons = document.querySelectorAll('[data-preset]');
+  const verifyList = document.getElementById('verify-list');
+  const verifyWrap = document.getElementById('verify-wrap');
 
   const ROUTER_VALUES = ['isr4321', 'isr4331', 'isr4351'];
 
@@ -449,6 +452,118 @@
     btn.addEventListener('click', function () { applyPreset(btn.getAttribute('data-preset')); });
   });
 
+  /* -------------------------------------------------------------------------
+     Syntax highlighting.
+
+     The output is the part people actually read, and until now every line of
+     it was the same shade of grey -- including the warning saying the file
+     holds a password in plain text. Colour is not decoration here; it is what
+     makes that line get read instead of scrolled past.
+
+     The highlighted copy is display-only. Copy and Download always use the
+     plain string, so nothing markup-ish can ever reach a switch.
+     ---------------------------------------------------------------------- */
+
+  function escapeHtml(t) {
+    return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /** Words that begin a line and are worth reading as "this is an instruction". */
+  const KEYWORDS = /^(hostname|enable|service|no|ip|ipv6|vlan|interface|switchport|spanning-tree|username|line|login|transport|exec-timeout|crypto|banner|ntp|snmp-server|logging|end|name|description|shutdown|duplex|speed|channel-group)\b/;
+
+  function highlight(config) {
+    return config.split('\n').map(function (raw) {
+      const line = escapeHtml(raw);
+
+      // Warnings have to survive a skim. They are the reason this exists.
+      if (/^!\s*(WARNING|CAUTION|NOTE)/i.test(raw)) {
+        return '<span class="tok-warn">' + line + '</span>';
+      }
+      if (raw.trim() === '!' || raw.trim().charAt(0) === '!') {
+        return '<span class="tok-comment">' + line + '</span>';
+      }
+
+      const indent = line.match(/^\s*/)[0];
+      const body = line.slice(indent.length);
+      const m = body.match(KEYWORDS);
+      if (!m) return line;
+
+      const kw = m[0];
+      let rest = body.slice(kw.length);
+
+      // Anything that looks like an address, a VLAN id, or an interface range
+      // is the bit someone double-checks against their own network.
+      rest = rest.replace(/(\d{1,3}(?:\.\d{1,3}){3})/g, '<span class="tok-ip">$1</span>');
+      rest = rest.replace(/(\b(?:Gigabit|TenGigabit|FastEthernet|Ethernet|Vlan)\S*)/g, '<span class="tok-intf">$1</span>');
+      rest = rest.replace(/(^|\s)(\d+(?:-\d+)?)(?=\s|$)/g, '$1<span class="tok-num">$2</span>');
+
+      return indent + '<span class="tok-cmd">' + kw + '</span>' + rest;
+    }).join('\n');
+  }
+
+  /* -------------------------------------------------------------------------
+     "Now check it worked."
+
+     A beginner applies a config and has no idea whether it took. These are the
+     commands that answer that, chosen from what was actually configured, plus
+     the one everybody forgets.
+     ---------------------------------------------------------------------- */
+  function buildVerify() {
+    const out = [];
+    const isR = isRouter();
+    out.push(['show running-config', 'What the device is running right now.']);
+    if (!isR && (vlanVoiceId.value.trim() || vlanDataId.value.trim() || vlanSecurityId.value.trim())) {
+      out.push(['show vlan brief', 'Lists your VLANs. If one is missing, it did not apply.']);
+    }
+    if (!isR) {
+      if (portModeSelect.value === 'trunk') {
+        out.push(['show interfaces trunk', 'Confirms the trunk came up and which VLANs cross it.']);
+      } else {
+        out.push(['show interfaces status', 'Shows which ports are up and what VLAN each is in.']);
+      }
+    }
+    out.push(['show ip interface brief', 'Every interface and its address. "up/up" is what you want.']);
+    if (mgmtIpInput.value.trim()) {
+      out.push(['show ip interface brief | include Vlan', 'Checks the management address specifically.']);
+    }
+    if (mgmtGatewayInput.value.trim()) {
+      out.push(['ping ' + mgmtGatewayInput.value.trim(), 'Can the device reach its gateway? Five exclamation marks means yes.']);
+    }
+    if (domainNameInput.value.trim()) {
+      out.push(['show ip ssh', 'Confirms SSH is enabled and which version.']);
+      if (sshUserInput.value.trim()) {
+        out.push(['show running-config | include username', 'Confirms your login account exists.']);
+      }
+    }
+    if (ntpServerInput.value.trim()) {
+      out.push(['show ntp status', 'Clock synchronised? Logs are useless with the wrong time.']);
+    }
+    if (aclNameInput.value.trim()) {
+      out.push(['show access-lists', 'Your ACL and how many packets have matched it.']);
+    }
+    out.push(['copy running-config startup-config',
+      'SAVE IT. Everything above is lost on the next reboot until you run this.']);
+    return out;
+  }
+
+  function renderVerify() {
+    const items = buildVerify();
+    verifyList.innerHTML = '';
+    items.forEach(function (pair) {
+      const li = document.createElement('li');
+      const code = document.createElement('code');
+      code.textContent = pair[0];
+      const span = document.createElement('span');
+      span.className = 'verify-why';
+      span.textContent = pair[1];
+      if (pair[0].indexOf('copy running-config') === 0) li.className = 'verify-save';
+      li.appendChild(code);
+      li.appendChild(span);
+      verifyList.appendChild(li);
+    });
+    verifyWrap.classList.remove('hidden');
+  }
+
   function validateSecurity() {
     const errors = [];
     const secret = enableSecretInput.value.trim();
@@ -498,9 +613,13 @@
     }
 
     const config = buildConfig();
-    outputPre.textContent = config;
-    // Plain English first, Cisco syntax second.
+    // Display gets the highlighted copy; `data-plain` is what Copy and
+    // Download read, so no markup can ever reach a switch.
+    outputPre.innerHTML = highlight(config);
+    outputPre.setAttribute('data-plain', config);
+    // Plain English first, Cisco syntax second, then how to check it worked.
     renderSummary();
+    renderVerify();
     outputWrap.classList.remove('hidden');
     copyBtn.disabled = false;
     downloadBtn.disabled = false;
@@ -509,7 +628,7 @@
   generateBtn.addEventListener('click', runGenerate);
 
   copyBtn.addEventListener('click', function () {
-    const text = outputPre.textContent;
+    const text = outputPre.getAttribute('data-plain') || outputPre.textContent;
     if (!text) return;
     navigator.clipboard.writeText(text).then(
       function () {
@@ -525,19 +644,27 @@
     );
   });
 
-  downloadBtn.addEventListener('click', function () {
-    const text = outputPre.textContent;
+  /**
+   * `.txt` opens anywhere with a double-click. `.cfg` is what network tooling
+   * and the VS Code Cisco syntax extensions bind to, so it arrives coloured
+   * instead of grey. Same bytes either way -- only the extension differs.
+   */
+  function downloadConfig(ext) {
+    const text = outputPre.getAttribute('data-plain') || outputPre.textContent;
     if (!text) return;
     const hostname = hostnameInput.value.trim() || 'switch';
     const safe = hostname.replace(/\s/g, '-').replace(/[^\w\-]/g, '');
-    const filename = (safe || 'config') + '-config.txt';
+    const filename = (safe || 'config') + '-config.' + ext;
     const blob = new Blob([text], { type: 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = filename;
     a.click();
     URL.revokeObjectURL(a.href);
-  });
+  }
+
+  downloadBtn.addEventListener('click', function () { downloadConfig('txt'); });
+  if (downloadCfgBtn) downloadCfgBtn.addEventListener('click', function () { downloadConfig('cfg'); });
 
   toggleNimAndPortDensity();
   toggleTrunkAllowed();

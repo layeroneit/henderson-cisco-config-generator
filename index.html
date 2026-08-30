@@ -259,6 +259,7 @@
         <button type="button" id="generate" class="btn btn-primary">Generate config</button>
         <button type="button" id="copy" class="btn btn-secondary" disabled>Copy to clipboard</button>
         <button type="button" id="download" class="btn btn-secondary" disabled>Download .txt</button>
+        <button type="button" id="download-cfg" class="btn btn-secondary" disabled>Download .cfg</button>
       </section>
 
       <!-- What it will do, in words -->
@@ -270,7 +271,19 @@
       <!-- Output -->
       <section class="card output-wrap hidden" id="output-wrap">
         <h2>Generated config</h2>
+        <p class="hint">Comments are dimmed, commands are highlighted, and anything
+        in <span class="tok-warn">orange</span> is a warning you should read rather than scroll past.
+        <strong>.cfg</strong> is the same file with the extension VS Code and most network
+        tools recognise, so it opens with syntax highlighting.</p>
         <pre id="output" class="output"></pre>
+      </section>
+
+      <!-- Now check it worked -->
+      <section class="card verify-wrap hidden" id="verify-wrap">
+        <h2>Now check it worked</h2>
+        <p class="hint">Run these on the device after applying the config. If something
+        is missing from the output, that part did not take.</p>
+        <ul id="verify-list" class="verify-list"></ul>
       </section>
     </main>
   </div>

@@ -441,3 +441,315 @@ body {
   color: var(--accent-orange, #E8590C);
   font-weight: 600;
 }
+
+
+/* ---------------------------------------------------------------------------
+   Config syntax highlighting.
+
+   The warning about plain-text passwords used to be the same grey as every
+   other line, which is a good way to make sure nobody reads it. Colour here is
+   doing a job, not decorating.
+   ------------------------------------------------------------------------ */
+
+.tok-comment { opacity: 0.45; }
+.tok-cmd     { color: #4FC3F7; font-weight: 600; }
+.tok-ip      { color: #FFB74D; }
+.tok-intf    { color: #81C784; }
+.tok-num     { color: #FFD54F; }
+
+.tok-warn {
+  color: #FF7043;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------------------
+   The "now check it worked" list.
+   ------------------------------------------------------------------------ */
+
+.verify-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.verify-list li {
+  padding: 0.55rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.verify-list li:last-child { border-bottom: 0; }
+
+.verify-list code {
+  display: block;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.92rem;
+  color: #4FC3F7;
+  margin-bottom: 0.15rem;
+  overflow-wrap: anywhere;
+}
+
+.verify-why {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  line-height: 1.45;
+}
+
+/* Everyone forgets to save, once, and only once. */
+.verify-list li.verify-save code { color: #FF7043; }
+.verify-list li.verify-save .verify-why { opacity: 1; font-weight: 600; }
+
+/* ===========================================================================
+   SCI-FI OVERLAY
+   ===========================================================================
+
+   Appended last so it wins on specificity without editing the rules above.
+
+   The flat square grid read as graph paper. What replaces it: a horizon grid
+   that recedes and drifts, a slow scanline wash, HUD corner brackets on every
+   card, and a scan sweep across the output panel. The palette does not change
+   -- the cyan and orange were already right -- it is put to work instead.
+
+   One rule the whole thing obeys: this is a tool people read Cisco commands
+   in. Every effect sits BEHIND or AROUND the content, never over the text, and
+   the whole lot switches off under prefers-reduced-motion. A config you cannot
+   read is not a nicer config.
+   ========================================================================= */
+
+:root {
+  --scan-speed: 8s;
+  --grid-speed: 22s;
+  /* The syntax colours are pulled onto the theme's own accents so the output
+     panel belongs to the page instead of looking like a pasted-in snippet. */
+  --tok-cmd: var(--accent-cyan);
+  --tok-ip: #ffb861;
+  --tok-intf: #7df9c4;
+  --tok-num: #ffd479;
+  --tok-warn: var(--accent-orange);
+}
+
+/* --- the horizon ---------------------------------------------------------
+   Two grids: one lying flat and receding to a vanishing point, one standing
+   up behind it. The floor drifts toward the viewer, which is what sells the
+   depth; the wall stays still so the eye has something fixed. */
+
+.theme-grid {
+  background-image:
+    linear-gradient(rgba(0, 212, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.05) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, transparent 42%);
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, transparent 42%);
+}
+
+.theme-bg::after {
+  content: "";
+  position: absolute;
+  left: -50%;
+  right: -50%;
+  bottom: -10%;
+  height: 70vh;
+  background-image:
+    linear-gradient(rgba(0, 212, 255, 0.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.16) 1px, transparent 1px);
+  background-size: 80px 80px;
+  transform: perspective(340px) rotateX(72deg);
+  transform-origin: 50% 100%;
+  animation: grid-drift var(--grid-speed) linear infinite;
+  mask-image: linear-gradient(0deg, rgba(0, 0, 0, 0.9) 0%, transparent 72%);
+  -webkit-mask-image: linear-gradient(0deg, rgba(0, 0, 0, 0.9) 0%, transparent 72%);
+  pointer-events: none;
+}
+
+@keyframes grid-drift {
+  from { background-position: 0 0; }
+  to   { background-position: 0 80px; }
+}
+
+/* --- scanlines + a slow wash --------------------------------------------
+   Fixed to the viewport rather than the page so it feels like the screen you
+   are looking at, not a texture on the document. */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.16) 0px,
+      rgba(0, 0, 0, 0.16) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 34vh;
+  top: -34vh;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(0, 212, 255, 0.055), transparent);
+  animation: scan-wash var(--scan-speed) linear infinite;
+}
+
+@keyframes scan-wash {
+  from { transform: translateY(0); }
+  to   { transform: translateY(160vh); }
+}
+
+/* --- cards become HUD panels --------------------------------------------
+   Corner brackets instead of a full border: it reads as an instrument panel,
+   and it leaves the card edge quieter than four glowing sides would. */
+
+.card {
+  position: relative;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.card::before,
+.card::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--accent-cyan);
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 0.25s ease, width 0.25s ease, height 0.25s ease;
+}
+
+.card::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+
+.card::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}
+
+.card:hover::before,
+.card:hover::after {
+  opacity: 1;
+  width: 24px;
+  height: 24px;
+}
+
+/* --- headings get a readout marker -------------------------------------- */
+
+.card h2 {
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 18px rgba(0, 212, 255, 0.35);
+}
+
+.card h2::before {
+  content: "▸ ";
+  color: var(--accent-cyan);
+  opacity: 0.7;
+}
+
+.header h1 {
+  text-shadow:
+    0 0 24px rgba(0, 212, 255, 0.4),
+    0 0 60px rgba(0, 212, 255, 0.15);
+}
+
+/* --- the output panel is a terminal, so let it look like one ------------- */
+
+.output-wrap { position: relative; overflow: hidden; }
+
+.output {
+  position: relative;
+  border: 1px solid var(--border-accent);
+  box-shadow:
+    inset 0 0 40px rgba(0, 212, 255, 0.07),
+    var(--glow-cyan);
+  background:
+    linear-gradient(180deg, rgba(4, 10, 20, 0.96), rgba(6, 14, 26, 0.96));
+}
+
+/* A single sweep travelling down the config, slow enough to ignore. */
+.output-wrap::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 90px;
+  top: -90px;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(0, 212, 255, 0.07), transparent);
+  animation: scan-wash 6s linear infinite;
+}
+
+/* --- syntax tokens, retuned to the theme -------------------------------- */
+
+.tok-cmd  { color: var(--tok-cmd); text-shadow: 0 0 12px rgba(0, 212, 255, 0.4); }
+.tok-ip   { color: var(--tok-ip); }
+.tok-intf { color: var(--tok-intf); }
+.tok-num  { color: var(--tok-num); }
+
+.tok-warn {
+  color: var(--tok-warn);
+  text-shadow: 0 0 14px var(--accent-orange-glow);
+}
+
+.verify-list code { color: var(--accent-cyan); }
+.verify-list li.verify-save code { color: var(--accent-orange); }
+
+/* --- the notice reads as an alert, not a paragraph ---------------------- */
+
+.notice {
+  border-left: 3px solid var(--accent-orange);
+  box-shadow: inset 0 0 40px rgba(249, 115, 22, 0.06);
+}
+
+.notice strong { color: var(--accent-orange); letter-spacing: 0.03em; }
+
+/* --- template buttons --------------------------------------------------- */
+
+.presets .btn {
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.presets .btn:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+/* --- accessibility -------------------------------------------------------
+   Everything above is atmosphere. Somebody who has asked their operating
+   system to stop moving things has asked for a reason, and a person reading
+   switch configuration is entitled to a still page. */
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-bg::after,
+  body::before,
+  .output-wrap::after {
+    animation: none;
+  }
+  body::before,
+  .output-wrap::after { display: none; }
+}
+
+/* Small screens: the perspective floor eats vertical room that a phone does
+   not have to spare, and the scanlines cost more than they give at that size. */
+@media (max-width: 640px) {
+  .theme-bg::after { height: 40vh; opacity: 0.5; }
+  body::after { opacity: 0.2; }
+}
