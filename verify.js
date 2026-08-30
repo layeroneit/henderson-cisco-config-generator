@@ -110,5 +110,53 @@ const warned = cfg2.includes("no local username was");
 console.log(`  ${warned ? "PASS" : "FAIL"}  warns when SSH has no account`);
 if (!warned) bad++;
 
+// --- platform matrix ------------------------------------------------------
+// The interface keyword tracks the platform and the port speed. Getting it
+// wrong yields a config that fails on paste, which no diff would reveal.
+const cases = [
+  ["c9200", "48", "gi", "GigabitEthernet1/0/1 - 48"],
+  ["c9300", "48", "ten", "TenGigabitEthernet1/0/1 - 48"],
+  ["c9300x", "24", "twentyfive", "TwentyFiveGigE1/0/1 - 24"],
+  ["c9500", "32", "hundred", "HundredGigE1/0/1 - 32"],
+  ["c9500x", "36", "fifty", "FiftyGigE1/0/1 - 36"],
+];
+for (const [model, dens, dtype, expect] of cases) {
+  node("model").value = model;
+  node("port-density").value = dens;
+  node("downlink-type").value = dtype;
+  node("chassis-slot").value = "1";
+  handlers["generate"].click();
+  const c = node("output").getAttribute("data-plain") || "";
+  const ok = c.includes("interface range " + expect);
+  if (!ok) bad++;
+  console.log(`  ${ok ? "PASS" : "FAIL"}  ${model} ${dens}p -> ${expect}`);
+}
+
+node("model").value = "c9400";
+node("port-density").value = "48";
+node("downlink-type").value = "gi";
+node("chassis-slot").value = "3";
+handlers["generate"].click();
+const modular = (node("output").getAttribute("data-plain") || "").includes("interface range GigabitEthernet3/0/1 - 48");
+console.log(`  ${modular ? "PASS" : "FAIL"}  c9400 slot 3 -> GigabitEthernet3/0/1 - 48`);
+if (!modular) bad++;
+
+for (const [model, wanIntf] of [["c8500", "TenGigabitEthernet0/0/0"], ["isr4331", "GigabitEthernet0/0/0"], ["c8000v", "GigabitEthernet1"]]) {
+  node("model").value = model;
+  handlers["generate"].click();
+  const r = node("output").getAttribute("data-plain") || "";
+  const ok = !r.includes("FastEthernet") && r.includes("interface " + wanIntf);
+  if (!ok) bad++;
+  console.log(`  ${ok ? "PASS" : "FAIL"}  ${model} -> ${wanIntf}, no FastEthernet`);
+}
+
+node("model").value = "c9500";
+node("downlink-type").value = "hundred";
+handlers["generate"].click();
+const allCfg = node("output").getAttribute("data-plain") || "";
+const xr = /TenGigE|FortyGigE|TwentyFiveGigabitEthernet|HundredGigabitEthernet/.test(allCfg);
+console.log(`  ${!xr ? "PASS" : "FAIL"}  no IOS-XR interface spellings`);
+if (xr) bad++;
+
 console.log(bad === 0 ? "\nALL CHECKS PASSED" : `\n${bad} CHECK(S) FAILED`);
 process.exit(bad === 0 ? 0 : 1);

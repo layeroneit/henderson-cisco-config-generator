@@ -45,7 +45,7 @@ This generates a **solid starting point, not a finished design.**
 
 | Section | What you get |
 |---|---|
-| **Hardware** | Catalyst 9200 / 9300 switches, ISR 4321 / 4331 / 4351 routers, 8 / 24 / 48 ports, optional NIM modules |
+| **Hardware** | Catalyst 9200 / 9200CX / 9300 / 9300X / 9400 / 9500 / 9500X / 9600 switches; Catalyst 8200 / 8300 / 8500 / 8000V and ISR 4321 / 4331 / 4351 routers |
 | **VLANs** | Voice, data and management VLANs with names, validated to the real 1–4094 range |
 | **Interfaces** | Access or trunk mode, allowed VLAN lists, descriptions, voice VLAN on access ports |
 | **Security** | Enable secret, SSH with a working login, domain name, login banner |
@@ -65,6 +65,33 @@ It's on by default, and it's the part a beginner most benefits from:
 - `spanning-tree portfast` + `bpduguard` on access ports — a PC gets a link
   immediately instead of waiting ~30 seconds, and if somebody plugs a switch
   into a desk port, that port shuts down instead of taking the network with it.
+
+### About the interface names
+
+This is where a generated config most often fails silently, so the tool is
+picky about it.
+
+- **The speed keyword tracks the port, not the model.** Up to 40G it is
+  `GigabitEthernet` / `TwoGigabitEthernet` / `FiveGigabitEthernet` /
+  `TenGigabitEthernet` / `FortyGigabitEthernet`. From 25G up it changes shape:
+  `TwentyFiveGigE`, `FiftyGigE`, `HundredGigE`, `FourHundredGigE`.
+  `TwentyFiveGigabitEthernet` does not exist. Neither does `TenGigE` or
+  `FortyGigE` — those are IOS-XR spellings and a Catalyst rejects them.
+- **A multigigabit switch mixes types in one config.** A C9300-48UXM is
+  `TwoGigabitEthernet1/0/1-36` *and* `TenGigabitEthernet1/0/37-48`. No single
+  range covers it, which is why the tool asks which downlink type you mean
+  rather than guessing. Run `show interfaces status` if you are unsure.
+- **Modular chassis are `slot/0/port`.** On a 9400 or 9600 the first number is
+  the physical slot the card is in and the middle is always 0 — a card in slot
+  3 gives `GigabitEthernet3/0/1`.
+
+### End-of-sale platforms
+
+Several are past end of sale, and the tool says so when you pick one. They are
+kept because plenty of them are still racked and running: **ISR 4321 / 4331 /
+4351** (end of sale 2023, software maintenance ended August 2025), and the
+whole **Catalyst 8000** hardware line (end of sale 2027). Catalyst 9200 and
+9300 carry no end-of-life notice at all.
 
 ### About SSH
 
@@ -134,9 +161,11 @@ app.js       validation, config generation, copy and download
 verify.js    headless check that the generated config is actually usable
 ```
 
-`node verify.js` runs `app.js` against a stub DOM and asserts the output
-contains a working SSH login, the hardening lines, and the plain-text password
-warning. Run it after touching `buildConfig`.
+`node verify.js` runs `app.js` against a stub DOM and asserts what actually
+comes out: a working SSH login, the hardening lines, the plain-text password
+warning, and the right interface keyword for each platform — including that no
+IOS-XR spelling ever appears. 27 checks. Run it after touching `buildConfig`
+or `PLATFORMS`.
 
 ---
 

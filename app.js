@@ -6,6 +6,12 @@
   const portDensityWrap = document.getElementById('port-density-wrap');
   const nimWrap = document.getElementById('nim-wrap');
   const nimSelect = document.getElementById('nim');
+  const downlinkTypeSelect = document.getElementById('downlink-type');
+  const downlinkTypeWrap = document.getElementById('downlink-type-wrap');
+  const slotInput = document.getElementById('chassis-slot');
+  const slotWrap = document.getElementById('chassis-slot-wrap');
+  const voiceVlanWrap = document.getElementById('voice-vlan-wrap');
+  const platformNote = document.getElementById('platform-note');
   const portDensitySelect = document.getElementById('port-density');
   const hostnameInput = document.getElementById('hostname');
   const vlanVoiceId = document.getElementById('vlan-voice-id');
@@ -53,25 +59,179 @@
   const verifyList = document.getElementById('verify-list');
   const verifyWrap = document.getElementById('verify-wrap');
 
-  const ROUTER_VALUES = ['isr4321', 'isr4331', 'isr4351'];
+  /* =========================================================================
+     PLATFORMS
+
+     Verified against Cisco configuration guides and real device captures.
+     Three rules drive everything here, and each one is a way to produce a
+     config that silently fails:
+
+     1. THE SPEED KEYWORD SPELLING SPLITS AT 25G.
+        Up to 40G it is `...GigabitEthernet` (GigabitEthernet, Two-, Five-,
+        Ten-, Forty-). From 25G up it is `...GigE` (TwentyFiveGigE, FiftyGigE,
+        HundredGigE, FourHundredGigE). `TwentyFiveGigabitEthernet` does not
+        exist. Neither does `TenGigE` or `FortyGigE` -- those are IOS-XR
+        spellings and are rejected on Catalyst.
+
+     2. THE KEYWORD TRACKS THE PORT'S SPEED, NOT THE MODEL.
+        A multigigabit 48-port switch emits more than one keyword in a single
+        config: a C9300-48UXM is TwoGigabitEthernet1/0/1-36 AND
+        TenGigabitEthernet1/0/37-48. There is no single range that covers it,
+        which is why the downlink type is a question rather than an assumption.
+
+     3. MODULAR CHASSIS ARE slot/0/port, NOT slot/module/port.
+        On a C9400 or C9600 the first number is the physical chassis slot and
+        the middle is ALWAYS 0 -- `GigabitEthernet3/0/1` for a card in slot 3.
+        (Cisco's own C9400 guide contradicts this; the C9600 guide and real
+        device output agree with what is written here.)
+     ====================================================================== */
+
+  const DOWNLINK_TYPES = {
+    gi: 'GigabitEthernet',
+    two: 'TwoGigabitEthernet',
+    five: 'FiveGigabitEthernet',
+    ten: 'TenGigabitEthernet',
+    twentyfive: 'TwentyFiveGigE',
+    forty: 'FortyGigabitEthernet',
+    fifty: 'FiftyGigE',
+    hundred: 'HundredGigE',
+  };
+
+  const PLATFORMS = {
+    // ---- Catalyst 9000 switches -----------------------------------------
+    c9200:   { label: 'Catalyst 9200',  kind: 'switch', group: 'Catalyst 9000 switches',
+               densities: [24, 48], down: ['gi', 'ten'], up: 'TenGigabitEthernet', voice: true },
+    c9200cx: { label: 'Catalyst 9200CX (compact)', kind: 'switch', group: 'Catalyst 9000 switches',
+               densities: [8, 12], down: ['gi'], up: 'GigabitEthernet', voice: true },
+    c9300:   { label: 'Catalyst 9300',  kind: 'switch', group: 'Catalyst 9000 switches',
+               densities: [24, 48], down: ['gi', 'two', 'five', 'ten'], up: 'TenGigabitEthernet', voice: true },
+    c9300x:  { label: 'Catalyst 9300X', kind: 'switch', group: 'Catalyst 9000 switches',
+               densities: [12, 24, 48], down: ['ten', 'twentyfive'], up: 'HundredGigE', voice: true },
+    c9400:   { label: 'Catalyst 9400 (modular)', kind: 'switch', group: 'Catalyst 9000 switches',
+               densities: [24, 48], down: ['gi', 'ten'], up: 'FortyGigabitEthernet', voice: true, modular: true },
+    c9500:   { label: 'Catalyst 9500',  kind: 'switch', group: 'Catalyst 9000 switches',
+               densities: [16, 24, 32, 40, 48], down: ['ten', 'twentyfive', 'forty', 'hundred'],
+               up: 'HundredGigE', voice: true },
+    c9500x:  { label: 'Catalyst 9500X', kind: 'switch', group: 'Catalyst 9000 switches',
+               densities: [36, 64], down: ['hundred', 'fifty'], up: 'HundredGigE', voice: false },
+    c9600:   { label: 'Catalyst 9600 (modular)', kind: 'switch', group: 'Catalyst 9000 switches',
+               densities: [24, 40, 48], down: ['hundred', 'forty'], up: null, voice: true, modular: true,
+               note: 'Supervisors on the 9600 have no uplink ports of their own.' },
+
+    // ---- Catalyst 8000 routers ------------------------------------------
+    c8200:  { label: 'Catalyst 8200', kind: 'router', group: 'Catalyst 8000 routers',
+              onboard: 4, wan: 'GigabitEthernet0/0/0', mgmt: false,
+              eos: 'End of sale 2027-07-31.' },
+    c8300:  { label: 'Catalyst 8300', kind: 'router', group: 'Catalyst 8000 routers',
+              onboard: 4, wan: 'GigabitEthernet0/0/0', mgmt: false,
+              eos: 'End of sale 2027.',
+              note: 'The 4T2X variant adds TenGigabitEthernet0/0/4 and 0/0/5.' },
+    c8500:  { label: 'Catalyst 8500', kind: 'router', group: 'Catalyst 8000 routers',
+              onboard: 12, wan: 'TenGigabitEthernet0/0/0', mgmt: true,
+              eos: 'End of sale 2027.' },
+    c8000v: { label: 'Catalyst 8000V (virtual)', kind: 'router', group: 'Catalyst 8000 routers',
+              onboard: 2, wan: 'GigabitEthernet1', mgmt: false, flat: true,
+              note: 'Virtual platform: interfaces are flat (GigabitEthernet1, 2, ...), not slot-based. GigabitEthernet0 is no longer supported.' },
+
+    // ---- ISR 4000 -- still widely deployed -------------------------------
+    isr4321: { label: 'ISR 4321', kind: 'router', group: 'ISR 4000 routers',
+               onboard: 2, wan: 'GigabitEthernet0/0/0', mgmt: true,
+               eos: 'End of sale 2023-11-07; software maintenance ended 2025-08-31.' },
+    isr4331: { label: 'ISR 4331', kind: 'router', group: 'ISR 4000 routers',
+               onboard: 3, wan: 'GigabitEthernet0/0/0', mgmt: true,
+               eos: 'End of sale 2023-11-07; software maintenance ended 2025-08-31.' },
+    isr4351: { label: 'ISR 4351', kind: 'router', group: 'ISR 4000 routers',
+               onboard: 3, wan: 'GigabitEthernet0/0/0', mgmt: true,
+               eos: 'End of sale 2023-11-07; software maintenance ended 2025-08-31.' },
+  };
+
+  function platform() {
+    return PLATFORMS[modelSelect.value] || null;
+  }
 
   function isRouter() {
-    return ROUTER_VALUES.includes(modelSelect.value);
+    const p = platform();
+    return p ? p.kind === 'router' : false;
   }
 
+  /** Builds the model dropdown from the table so the two cannot drift apart. */
+  function populateModels() {
+    const groups = {};
+    Object.keys(PLATFORMS).forEach(function (id) {
+      const p = PLATFORMS[id];
+      (groups[p.group] = groups[p.group] || []).push([id, p]);
+    });
+    modelSelect.innerHTML = '<option value="">-- Select model --</option>';
+    Object.keys(groups).forEach(function (g) {
+      const og = document.createElement('optgroup');
+      og.label = g;
+      groups[g].forEach(function (pair) {
+        const o = document.createElement('option');
+        o.value = pair[0];
+        o.textContent = pair[1].label + (pair[1].eos ? ' — end of sale' : '');
+        og.appendChild(o);
+      });
+      modelSelect.appendChild(og);
+    });
+  }
+  populateModels();
+
   function toggleNimAndPortDensity() {
-    if (isRouter()) {
-      nimWrap.classList.remove('hidden');
-      portDensityWrap.classList.add('hidden');
-      interfaceOptionsWrap.classList.add('hidden');
-      managementWrap.classList.add('hidden');
-    } else {
-      nimWrap.classList.add('hidden');
-      portDensityWrap.classList.remove('hidden');
-      interfaceOptionsWrap.classList.remove('hidden');
-      managementWrap.classList.remove('hidden');
+    const p = platform();
+    const router = isRouter();
+
+    nimWrap.classList.toggle('hidden', !router);
+    portDensityWrap.classList.toggle('hidden', router || !p);
+    interfaceOptionsWrap.classList.toggle('hidden', router);
+    managementWrap.classList.toggle('hidden', router);
+
+    // Only ask about downlink speed where the platform genuinely offers more
+    // than one -- a question with one answer is noise.
+    const multi = !!(p && p.down && p.down.length > 1);
+    downlinkTypeWrap.classList.toggle('hidden', router || !multi);
+    slotWrap.classList.toggle('hidden', !(p && p.modular));
+
+    // 9500X and 9600X do not support the voice VLAN feature at all.
+    if (voiceVlanWrap) voiceVlanWrap.classList.toggle('hidden', !!(p && p.voice === false));
+
+    if (p && p.down) {
+      const want = p.down;
+      const current = downlinkTypeSelect.value;
+      downlinkTypeSelect.innerHTML = '';
+      want.forEach(function (k) {
+        const o = document.createElement('option');
+        o.value = k;
+        o.textContent = DOWNLINK_TYPES[k];
+        downlinkTypeSelect.appendChild(o);
+      });
+      downlinkTypeSelect.value = want.indexOf(current) >= 0 ? current : want[0];
+    }
+
+    if (p && p.densities) {
+      const cur = portDensitySelect.value;
+      portDensitySelect.innerHTML = '';
+      p.densities.forEach(function (n) {
+        const o = document.createElement('option');
+        o.value = String(n);
+        o.textContent = n + ' ports';
+        portDensitySelect.appendChild(o);
+      });
+      portDensitySelect.value = p.densities.indexOf(parseInt(cur, 10)) >= 0 ? cur : String(p.densities[0]);
+    }
+
+    if (platformNote) {
+      const bits = [];
+      if (p && p.eos) bits.push('⚠ ' + p.eos);
+      if (p && p.note) bits.push(p.note);
+      if (p && p.voice === false) bits.push('This platform does not support the voice VLAN feature.');
+      if (p && p.down && p.down.length > 1) {
+        bits.push('Multigigabit models mix port types in one config — run "show interfaces status" and pick the type that matches the ports you mean.');
+      }
+      platformNote.textContent = bits.join(' ');
+      platformNote.classList.toggle('hidden', bits.length === 0);
     }
   }
+
 
   function toggleTrunkAllowed() {
     if (portModeSelect.value === 'trunk') {
@@ -156,13 +316,18 @@
   }
 
   function getInterfaceRange() {
+    const p = platform();
     const n = parseInt(portDensitySelect.value, 10) || 48;
-    if (n <= 8) return 'GigabitEthernet1/0/1 - 8';
-    if (n <= 24) return 'GigabitEthernet1/0/1 - 24';
-    return 'GigabitEthernet1/0/1 - 48';
+    const type = DOWNLINK_TYPES[downlinkTypeSelect.value] || 'GigabitEthernet';
+    // Modular chassis number by physical slot; the middle number is always 0.
+    // Stackables are member 1, module 0.
+    const slot = p && p.modular ? (parseInt(slotInput.value, 10) || 1) : 1;
+    return type + slot + '/0/1 - ' + n;
   }
 
   function getModelLabel() {
+    const p = platform();
+    if (p) return p.label;
     const o = modelSelect.selectedOptions[0];
     return o ? o.text : 'Switch';
   }
@@ -345,8 +510,19 @@
       // These platforms have NO FastEthernet interfaces at all, and an FXS
       // port is an analog voice port, not an Ethernet one. The previous
       // version emitted `interface FastEthernet0/1/0`, which simply fails.
-      lines.push('!', '! Router base interfaces (onboard ports are Layer 3, no switchport)');
-      lines.push('interface GigabitEthernet0/0/0', ' description WAN or uplink', ' no shutdown', '!');
+      const plat = platform() || {};
+      lines.push('!', '! Router base interfaces. Onboard ports are Layer 3 -- `switchport` is');
+      lines.push('! not valid on them. It IS valid on the ports of a switch module (0/1/x,');
+      lines.push('! 0/2/x, 1/0/x, 2/0/x) if one is fitted.');
+      lines.push('interface ' + (plat.wan || 'GigabitEthernet0/0/0'), ' description WAN or uplink', ' no shutdown', '!');
+      if (plat.mgmt === false) {
+        lines.push('! This platform has NO out-of-band management port. Do not configure',
+                   '! GigabitEthernet0 or vrf Mgmt-intf on it.', '!');
+      }
+      if (plat.flat) {
+        lines.push('! Virtual platform: interfaces are flat (GigabitEthernet1, 2, ...).',
+                   '! GigabitEthernet0 is no longer supported.', '!');
+      }
       if (nimSelect.value === 't1e1') {
         lines.push(
           '! A T1/E1 NIM is not an Ethernet interface. Set the card type first,',

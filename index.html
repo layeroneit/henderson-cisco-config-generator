@@ -47,19 +47,23 @@
         <div class="field">
           <label for="model">Model</label>
           <select id="model" required>
-            <option value="">-- Select model --</option>
-            <optgroup label="Switches">
-              <option value="c9200">Catalyst 9200</option>
-              <option value="c9300">Catalyst 9300</option>
-            </optgroup>
-            <optgroup label="Routers">
-              <option value="isr4321">ISR 4321</option>
-              <option value="isr4331">ISR 4331</option>
-              <option value="isr4351">ISR 4351</option>
-            </optgroup>
-          </select>
+              <option value="">-- Select model --</option>
+            </select>
         </div>
-        <div class="field" id="port-density-wrap">
+        <div class="field" id="downlink-type-wrap">
+            <label for="downlink-type">Downlink port type</label>
+            <select id="downlink-type"></select>
+            <p class="hint">The keyword tracks the port's <em>speed</em>, not the model. A
+            multigigabit switch mixes types in one config &mdash; run <code>show interfaces
+            status</code> and pick the one matching the ports you mean.</p>
+          </div>
+          <div class="field hidden" id="chassis-slot-wrap">
+            <label for="chassis-slot">Line-card slot</label>
+            <input type="number" id="chassis-slot" min="1" max="10" value="1">
+            <p class="hint">Modular chassis are numbered <code>slot/0/port</code> &mdash; the
+            middle number is always 0. Use the physical slot the card is in.</p>
+          </div>
+          <div class="field" id="port-density-wrap">
           <label for="port-density">Port density</label>
           <select id="port-density">
             <option value="8">8 port</option>
@@ -76,7 +80,8 @@
             <option value="t3e3">T3/E3</option>
           </select>
         </div>
-        <div class="field">
+        <p class="hint hidden" id="platform-note"></p>
+          <div class="field">
           <label for="hostname">Hostname</label>
           <input type="text" id="hostname" placeholder="e.g. SW-CORE-01" maxlength="63">
         </div>
@@ -87,8 +92,7 @@
         <h2>2. VLAN Configuration</h2>
         <p class="hint">VLAN IDs must be 1–4094.</p>
         <div class="vlan-row">
-          <div class="field">
-            <label for="vlan-voice-id">Voice VLAN ID</label>
+          <div class="field" id="voice-vlan-wrap"><label for="vlan-voice-id">Voice VLAN ID</label>
             <input type="number" id="vlan-voice-id" min="1" max="4094" placeholder="e.g. 10">
           </div>
           <div class="field">
