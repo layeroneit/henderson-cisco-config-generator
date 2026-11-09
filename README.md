@@ -176,5 +176,7 @@ Apache License 2.0 — see [`LICENSE`](LICENSE).
 Built by **[Layer One IT Consultants](https://layeroneconsultants.com/)**.
 Copyright © 2026 Layer One IT Consultants.
 
+Created by **Joseph J. Henderson** · Layer One IT Consultants
+
 Cisco, Catalyst and IOS are trademarks of Cisco Systems, Inc. This project is
 not affiliated with, endorsed by, or supported by Cisco.
